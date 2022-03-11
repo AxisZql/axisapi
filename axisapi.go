@@ -1,38 +1,32 @@
 package axisapi
 
 import (
-	"fmt"
 	"net/http"
 )
 
 // HandleFunc defines the request handler used by axisapi
-type HandleFunc func(http.ResponseWriter, *http.Request)
+type HandleFunc func(*Context)
 
 // Engine implement the interface of ServeHTTP
 type Engine struct {
-	router map[string]HandleFunc
+	router *router
 }
 
 // Engine is the uni handler for all requests
 // 定义ServeHTTP方法捕获所有request
 func (eg *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	key := req.Method + "|" + req.URL.Path
-	if handler, exist := eg.router[key]; exist {
-		handler(w, req)
-	} else {
-		fmt.Fprintf(w, "404 NOT FOUND:%s\n", req.URL)
-	}
+	ctx := newContext(w, req)
+	eg.router.handle(ctx)
 }
 
 // New is the constructor of axisapi.Engine
 func New() *Engine {
-	return &Engine{router: make(map[string]HandleFunc)}
+	return &Engine{router: newRouter()}
 }
 
 // 包内函数，添加路由
 func (eg *Engine) addRoute(method string, pattern string, handler HandleFunc) {
-	key := method + "|" + pattern
-	eg.router[key] = handler
+	eg.router.addRoute(method, pattern, handler)
 }
 
 // GET defines the method to add GET request
