@@ -51,6 +51,13 @@ func New() *Engine {
 	return engine
 }
 
+// Default use the default logging and error handling middleware
+func Default() *Engine {
+	engine := New()
+	engine.Use(Logger(), Recovery())
+	return engine
+}
+
 // 包内函数，添加路由
 func (eg *Engine) addRoute(method string, pattern string, handler HandleFunc) {
 	eg.router.addRoute(method, pattern, handler)
