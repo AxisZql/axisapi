@@ -33,13 +33,14 @@ func (n *node) matchChildren(part string) []*node {
 
 // 构造动态路由 Constructing dynamic routes
 func (n *node) insert(pattern string, parts []string, height int) {
+	// 只有匹配到最终点时pattern才会赋值，祖先节点如果不是路由规则则都是""
 	if len(parts) == height {
 		n.pattern = pattern
 		return
 	}
 
 	part := parts[height]
-	// 每个路由段名称唯一
+	// 深度一样而且同名或者泛匹配的不生成新节点
 	child := n.matchChild(part)
 	if child == nil {
 		child = &node{part: part, isWild: part[0] == ':' || part[0] == '*'}
@@ -50,12 +51,14 @@ func (n *node) insert(pattern string, parts []string, height int) {
 
 func (n *node) search(parts []string, height int) *node {
 	if len(parts) == height || strings.HasPrefix(n.part, "*") {
+		// 证明没有以parts[height]结束的路由规则
 		if n.pattern == "" {
 			return nil
 		}
 		return n
 	}
 	part := parts[height]
+	// 获取前缀树当前一层所有符合条件的孩子节点
 	children := n.matchChildren(part)
 	for _, child := range children {
 		result := child.search(parts, height+1)
