@@ -8,6 +8,7 @@ package axisapi
 import (
 	"log"
 	"net/http"
+	"strings"
 )
 
 // HandleFunc defines the request handler used by axisapi
@@ -31,13 +32,23 @@ type Engine struct {
 // Engine is the uni handler for all requests
 // 定义ServeHTTP方法捕获所有request,本框架的核心（在go中实现接口方法的struct都可以强制转化为接口类型）
 func (eg *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	var middlewares []HandleFunc
+	for _, group := range eg.groups {
+		if strings.HasPrefix(req.URL.Path, group.prefix) {
+			middlewares = append(middlewares, group.middlewares...)
+		}
+	}
 	ctx := newContext(w, req)
+	ctx.handlers = middlewares
 	eg.router.handle(ctx)
 }
 
 // New is the constructor of axisapi.Engine
 func New() *Engine {
-	return &Engine{router: newRouter()}
+	engine := &Engine{router: newRouter()}
+	engine.RouterGroup = &RouterGroup{engine: engine}
+	engine.groups = []*RouterGroup{engine.RouterGroup}
+	return engine
 }
 
 // 包内函数，添加路由
@@ -68,9 +79,14 @@ func (group *RouterGroup) Group(prefix string) *RouterGroup {
 	return newGroup
 }
 
+// Use the middleware（可以一次性添加多个中间件）(由于Engine嵌套RouterGroup所以非路由组也可调用Use方法来设置中间件）
+func (group *RouterGroup) Use(middlewares ...HandleFunc) {
+	group.middlewares = append(group.middlewares, middlewares...)
+}
+
 func (group *RouterGroup) addRoute(method string, comp string, handler HandleFunc) {
 	pattern := group.prefix + comp
-	log.Printf("Route %4s - %s", method, pattern)
+	log.Printf("Router %4s - %s", method, pattern)
 	// 调用engine实现的addRouter方法，保证之前的路由逻辑不会受影响
 	group.engine.addRoute(method, pattern, handler)
 }

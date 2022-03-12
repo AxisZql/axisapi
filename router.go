@@ -73,12 +73,18 @@ func (r *router) getRouter(method string, path string) (*node, map[string]string
 }
 
 func (r *router) handle(ctx *Context) {
+	// 设置中间件（所有handle function）
 	n, params := r.getRouter(ctx.Method, ctx.Path)
 	if n != nil {
 		ctx.Params = params
 		key := ctx.Method + "|" + n.pattern
-		r.handlers[key](ctx)
+		// 处理函数（不是中间件）最后执行
+		ctx.handlers = append(ctx.handlers, r.handlers[key])
 	} else {
-		ctx.String(http.StatusNotFound, "404 NOT FOUND: %s\n", ctx.Path)
+		ctx.handlers = append(ctx.handlers, func(ctx *Context) {
+			ctx.String(http.StatusNotFound, "404 NOT FOUND: %s\n", ctx.Path)
+		})
 	}
+	// 执行所有handle function
+	ctx.Next()
 }

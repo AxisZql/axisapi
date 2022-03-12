@@ -9,7 +9,7 @@ import (
 // H is a shortcut for map[string]interface{}
 type H map[string]interface{}
 
-// Context is a shortcut for record all information of the current HTTP session
+// Context is a shortcut for record all information of the current HTTP session（只记录当前http会话）
 // It's the most important part for axisapi
 type Context struct {
 	// origin object
@@ -21,6 +21,9 @@ type Context struct {
 	Params map[string]string
 	// response info
 	StatusCode int
+	// middleware
+	handlers []HandleFunc
+	index    int
 }
 
 func newContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -29,7 +32,24 @@ func newContext(w http.ResponseWriter, req *http.Request) *Context {
 		Req:    req,
 		Path:   req.URL.Path,
 		Method: req.Method,
+		index:  -1,
 	}
+}
+
+// Next 不是所有的handler都会调用 Next()。
+//手工调用 Next()，一般用于在请求前后各实现一些行为。如果中间件只作用于请求前，可以省略调用Next()，算是一种兼容性比较好的写法吧。
+func (ctx *Context) Next() {
+	ctx.index++
+	s := len(ctx.handlers)
+	for ; ctx.index < s; ctx.index++ {
+		ctx.handlers[ctx.index](ctx)
+	}
+}
+
+func (ctx *Context) Fail(code int, err string) {
+	// 出现错误是直接跳过为执行的中间件
+	ctx.index = len(ctx.handlers)
+	ctx.JSON(code, H{"msg": err})
 }
 
 // Param 获取动态路由中的参数 Get the parameters in the dynamic route
