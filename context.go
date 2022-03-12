@@ -60,10 +60,10 @@ func (ctx *Context) SetHeader(key string, value string) {
 //	Setting up different formats HTTP Responses
 //--------------------------
 
-func (ctx *Context) String(code int, format string, value ...interface{}) {
+func (ctx *Context) String(code int, format string, a ...interface{}) {
 	ctx.SetHeader("Content-Type", "text/plain")
 	ctx.Status(code)
-	ctx.Writer.Write([]byte(fmt.Sprintf(format, value...)))
+	ctx.Writer.Write([]byte(fmt.Sprintf(format, a...)))
 }
 
 func (ctx *Context) JSON(code int, obj interface{}) {
